@@ -1,0 +1,59 @@
+pip install --upgrade pip
+
+pip install beautifulsoup4
+
+pip install lxml
+
+pip install nltk
+
+import bs4 as bs
+import urllib.request
+import re
+import nltk
+import pandas as pd
+nltk.download('punkt')
+nltk.download('stopwords')
+webpage =urllib.request.urlopen('https://www.toppr.com/guides/essays/essay-on-pollution/')
+article = webpage.read()
+
+parsed_content = bs.BeautifulSoup(article,'lxml')
+
+paragraphs = parsed_content.find_all('p')
+
+content = ""
+
+for p in paragraphs:
+    content += p.text
+# Removing Square Brackets and Extra Spaces
+content = re.sub(r'\[[0-9]*\]', ' ', content)
+content = re.sub(r'\s+', ' ', content)
+# Removing special characters and digits
+format_content = re.sub('[^a-zA-Z]', ' ', content )
+format_content = re.sub(r'\s+', ' ', format_content)
+sentence_list = nltk.sent_tokenize(content)
+stopwords = nltk.corpus.stopwords.words('english')
+
+word_freq = {}
+for word in nltk.word_tokenize(format_content):
+    if word not in stopwords:
+        if word not in word_freq.keys():
+            word_freq[word] = 1
+        else:
+            word_freq[word] += 1
+    max_freq = max(word_freq.values())
+for word in word_freq.keys():
+    word_freq[word] = (word_freq[word]/max_freq)
+    sentence_scores = {}
+for sent in sentence_list:
+    for word in nltk.word_tokenize(sent.lower()):
+        if word in word_freq.keys():
+            if len(sent.split(' ')) < 30:
+                if sent not in sentence_scores.keys():
+                    sentence_scores[sent] = word_freq[word]
+                else:
+                    sentence_scores[sent] += word_freq[word]
+import heapq
+summary_content = heapq.nlargest(7, sentence_scores, key=sentence_scores.get)
+
+summary = ' '.join(summary_content)
+print(summary)
